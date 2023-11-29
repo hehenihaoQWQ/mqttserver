@@ -1,0 +1,41 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lqwql.mqttserver.mapper.DeviceMapper">
+    <insert id="addAirData">
+        insert into iot_air_data
+        values (#{id}, #{airt}, #{airh}, #{airp}, #{cid}, #{time})
+    </insert>
+    <insert id="addDevice">
+        insert into iot_device
+        values (#{id}, #{uid}, #{name})
+    </insert>
+    <select id="getDeviceList">
+        select id, uid, name
+        from iot_devices
+        where iot_devices.uid = #{uid}
+    </select>
+    <select id="getAirData">
+        SELECT all_times.time, iot_air_data.*
+        FROM (
+                 SELECT CAST(TIMESTAMPADD(SECOND, (intervals.interval_sec * (intervals.num_intervals - 1)) * -1, intervals.end_time) AS DATETIME) AS time
+                 FROM (
+                     SELECT NOW() AS end_time,
+                     TIMESTAMPADD(SECOND, -86400, NOW()) AS start_time,
+                     (86400 / 100) AS interval_sec,
+                     (ROW_NUMBER() OVER (ORDER BY NULL)) AS num_intervals
+                     FROM information_schema.tables
+                     ) intervals
+                 WHERE intervals.num_intervals BETWEEN 1 AND 100
+             ) all_times
+                 LEFT JOIN iot_air_data ON all_times.time = iot_air_data.time
+        WHERE iot_air_data.cid = #{cid} OR iot_air_data.cid IS NULL
+        ORDER BY all_times.time;
+    </select>
+    <update id="deviceSetName">
+        update iot_devices
+        set name = #{name}
+        where id = #{id}
+    </update>
+
+</mapper>
